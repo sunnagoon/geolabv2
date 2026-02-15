@@ -188,13 +188,13 @@ class ResultsTab(ttk.Frame):
                     row["code"],
                     row["name"],
                     row["status"] or "",
-                    row["result_value"] if row["result_value"] is not None else "",
+                    self._fmt1(row["result_value"]),
                     row["result_unit"] or "",
-                    row["result_value2"] if row["result_value2"] is not None else "",
+                    self._fmt1(row["result_value2"]),
                     row["result_unit2"] or "",
-                    row["result_value3"] if row["result_value3"] is not None else "",
+                    self._fmt1(row["result_value3"]),
                     row["result_unit3"] or "",
-                    row["result_value4"] if row["result_value4"] is not None else "",
+                    self._fmt1(row["result_value4"]),
                     row["result_unit4"] or "",
                 ),
             )
@@ -219,13 +219,13 @@ class ResultsTab(ttk.Frame):
         conn.close()
         if not row:
             return
-        self.value_var.set("" if row["result_value"] is None else str(row["result_value"]))
+        self.value_var.set(self._fmt1(row["result_value"]))
         self.unit_var.set(row["result_unit"] or "")
-        self.value2_var.set("" if row["result_value2"] is None else str(row["result_value2"]))
+        self.value2_var.set(self._fmt1(row["result_value2"]))
         self.unit2_var.set(row["result_unit2"] or "")
-        self.value3_var.set("" if row["result_value3"] is None else str(row["result_value3"]))
+        self.value3_var.set(self._fmt1(row["result_value3"]))
         self.unit3_var.set(row["result_unit3"] or "")
-        self.value4_var.set("" if row["result_value4"] is None else str(row["result_value4"]))
+        self.value4_var.set(self._fmt1(row["result_value4"]))
         self.unit4_var.set(row["result_unit4"] or "")
         self.notes_var.set(row["result_notes"] or "")
         self.status_var.set(row["status"] or "completed")
@@ -420,6 +420,14 @@ class ResultsTab(ttk.Frame):
             return round(max(0.0, min(100.0, sat)), 1)
         except Exception:
             return None
+
+    def _fmt1(self, value):
+        if value is None:
+            return ""
+        try:
+            return f"{float(value):.1f}"
+        except Exception:
+            return str(value)
 
     def _export_results_table(self):
         project_id = self.get_project_id()

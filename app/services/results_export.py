@@ -352,7 +352,7 @@ def _fmt_plain(value):
     if value is None:
         return ""
     try:
-        txt = f"{float(value):g}"
+        txt = f"{float(value):.1f}"
     except Exception:
         txt = str(value)
     return txt
