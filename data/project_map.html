@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>GeoLab Project Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+    .legend {
+      position: absolute; z-index: 9999; right: 10px; top: 10px;
+      background: rgba(255,255,255,0.95); padding: 10px 12px;
+      border: 1px solid #ccc; border-radius: 8px; font-family: Segoe UI, sans-serif; font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="legend">
+    <div><strong>GeoLab Jobs</strong></div>
+    <div>Default extent: California + Arizona</div>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const points = [{"file_number": "26-114", "job_name": "Bolin", "location_text": "4010 Morena Blvd San Diego Ca", "lat": 32.813566, "lon": -117.21786}];
+    const map = L.map('map').setView([34.2, -115.5], 6);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const bounds = [];
+    for (const p of points) {
+      const marker = L.circleMarker([p.lat, p.lon], {
+        radius: 6,
+        color: '#2f6e52',
+        fillColor: '#4aa97a',
+        fillOpacity: 0.85
+      }).addTo(map);
+      marker.bindPopup(
+        `<strong>${p.file_number}</strong><br/>${p.job_name}<br/>${p.location_text || 'No location text'}<br/>${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`
+      );
+      bounds.push([p.lat, p.lon]);
+    }
+    if (bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+    }
+  </script>
+</body>
+</html>
