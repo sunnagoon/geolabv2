@@ -11,6 +11,7 @@ from app.ui.results import ResultsTab
 from app.ui.map_view import MapTab
 from app.ui.worksheets import WorksheetsTab
 from app.ui.calculations import CalculationsTab
+from app.ui.settings import SettingsTab
 from app.db import get_connection
 
 
@@ -153,6 +154,7 @@ class GeoLabApp(tk.Tk):
         )
         self.calculations_tab = CalculationsTab(self.notebook, get_project_id=self._get_project_id)
         self.map_tab = MapTab(self.notebook)
+        self.settings_tab = SettingsTab(self.notebook)
 
         self.notebook.add(self.projects_tab, text="Projects")
         self.notebook.add(self.samples_tab, text="Samples")
@@ -163,6 +165,7 @@ class GeoLabApp(tk.Tk):
         self.notebook.add(self.billing_tab, text="Billing")
         self.notebook.add(self.rates_tab, text="Rates")
         self.notebook.add(self.map_tab, text="Map")
+        self.notebook.add(self.settings_tab, text="Settings")
 
         self._set_project_enabled(False)
 
@@ -178,6 +181,7 @@ class GeoLabApp(tk.Tk):
         self.billing_tab.refresh()
         self.rates_tab.refresh()
         self.map_tab.refresh()
+        self.settings_tab.refresh()
 
     def _get_project_id(self):
         return self.selected_project_id

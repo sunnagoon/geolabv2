@@ -1,8 +1,19 @@
 import sqlite3
+import sys
+import os
 from pathlib import Path
 from datetime import datetime
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "geolab.db"
+
+def _resolve_db_path():
+    # In a frozen executable, keep DB in a persistent user location.
+    if getattr(sys, "frozen", False):
+        root = Path(os.getenv("LOCALAPPDATA", str(Path.home()))) / "GeoLab" / "data"
+        return root / "geolab.db"
+    return Path(__file__).resolve().parent.parent / "data" / "geolab.db"
+
+
+DB_PATH = _resolve_db_path()
 
 
 def get_connection():
@@ -122,6 +133,7 @@ def init_db():
     _migrate_samples(cur)
     _migrate_sample_tests(cur)
     _migrate_worksheets(cur)
+    _migrate_settings(cur)
     _seed_tests(cur)
     _seed_rate_prices(cur)
 
@@ -131,6 +143,45 @@ def init_db():
 
 def now_iso():
     return datetime.now().isoformat(timespec="seconds")
+
+
+def get_app_setting(key, default=None):
+    conn = get_connection()
+    row = conn.execute("SELECT value FROM app_settings WHERE key = ?", (key,)).fetchone()
+    conn.close()
+    if not row:
+        return default
+    return row["value"]
+
+
+def set_app_setting(key, value):
+    conn = get_connection()
+    conn.execute(
+        """
+        INSERT INTO app_settings (key, value)
+        VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        """,
+        (key, value),
+    )
+    conn.commit()
+    conn.close()
+
+
+def backup_database(target_dir):
+    out_dir = Path(target_dir).expanduser().resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_path = out_dir / f"geolab_backup_{stamp}.db"
+
+    src = get_connection()
+    dst = sqlite3.connect(str(out_path))
+    try:
+        src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
+    return out_path
 
 
 def _seed_tests(cur):
@@ -334,3 +385,14 @@ def _migrate_worksheets(cur):
         """
     )
     cur.execute("CREATE INDEX IF NOT EXISTS idx_calculations_runs_project ON calculations_runs(project_id);")
+
+
+def _migrate_settings(cur):
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
+        """
+    )
