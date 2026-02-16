@@ -35,7 +35,7 @@ class MapTab(ttk.Frame):
         conn = get_connection()
         rows = conn.execute(
             """
-            SELECT file_number, job_name, location_text, latitude, longitude
+            SELECT file_number, job_name, client_type, location_text, latitude, longitude
             FROM projects
             ORDER BY created_at DESC
             """
@@ -60,7 +60,7 @@ class MapTab(ttk.Frame):
             )
             self.listbox.insert(
                 tk.END,
-                f"{p['file_number']} | {p['job_name']} | {location} {coord_text}",
+                f"{p['file_number']} | {p['job_name']} | {p.get('client_type') or 'Custom'} | {location} {coord_text}",
             )
         self.listbox.insert(tk.END, "")
         self.listbox.insert(tk.END, f"Mapped points: {mapped} / {len(points)}")
@@ -88,6 +88,7 @@ class MapTab(ttk.Frame):
             {
                 "file_number": p["file_number"],
                 "job_name": p["job_name"],
+                "client_type": p.get("client_type") or "Custom",
                 "location_text": p["location_text"] or "",
                 "lat": float(p["latitude"]),
                 "lon": float(p["longitude"]),
@@ -117,11 +118,21 @@ class MapTab(ttk.Frame):
   <div class="legend">
     <div><strong>GeoLab Jobs</strong></div>
     <div>Default extent: California + Arizona</div>
+    <div style="margin-top:6px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3d82f6;margin-right:6px;"></span>TCI</div>
+    <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#23a26d;margin-right:6px;"></span>GCI</div>
+    <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f0a42c;margin-right:6px;"></span>SBCI</div>
+    <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#8b96a8;margin-right:6px;"></span>Custom/Other</div>
   </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const points = {json_data};
     const map = L.map('map').setView([34.2, -115.5], 6);
+    const clientColors = {{
+      TCI: {{ stroke: '#2c63bf', fill: '#3d82f6' }},
+      GCI: {{ stroke: '#1a7f55', fill: '#23a26d' }},
+      SBCI: {{ stroke: '#c47f12', fill: '#f0a42c' }},
+      CUSTOM: {{ stroke: '#6f7888', fill: '#8b96a8' }}
+    }};
 
     L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
       maxZoom: 19,
@@ -130,14 +141,16 @@ class MapTab(ttk.Frame):
 
     const bounds = [];
     for (const p of points) {{
+      const key = (p.client_type || 'Custom').toUpperCase();
+      const clr = clientColors[key] || clientColors.CUSTOM;
       const marker = L.circleMarker([p.lat, p.lon], {{
         radius: 6,
-        color: '#2f6e52',
-        fillColor: '#4aa97a',
+        color: clr.stroke,
+        fillColor: clr.fill,
         fillOpacity: 0.85
       }}).addTo(map);
       marker.bindPopup(
-        `<strong>${{p.file_number}}</strong><br/>${{p.job_name}}<br/>${{p.location_text || 'No location text'}}<br/>${{p.lat.toFixed(5)}}, ${{p.lon.toFixed(5)}}`
+        `<strong>${{p.file_number}}</strong><br/>${{p.job_name}}<br/>Client: ${{p.client_type || 'Custom'}}<br/>${{p.location_text || 'No location text'}}<br/>${{p.lat.toFixed(5)}}, ${{p.lon.toFixed(5)}}`
       );
       bounds.push([p.lat, p.lon]);
     }}
