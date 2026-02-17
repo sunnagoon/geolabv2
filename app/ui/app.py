@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
+import sys
 
 from app.ui.projects import ProjectsTab
 from app.ui.samples import SamplesTab
@@ -28,6 +29,13 @@ class GeoLabApp(tk.Tk):
 
     def _build_ui(self):
         style = ttk.Style(self)
+
+        # Apple Tk can render ttk widgets incorrectly with non-native themes or
+        # aggressive global style overrides. Keep native defaults on macOS.
+        if sys.platform == "darwin":
+            self._build_layout()
+            return
+
         try:
             style.theme_use("clam")
         except tk.TclError:
@@ -111,6 +119,9 @@ class GeoLabApp(tk.Tk):
             foreground=[("selected", "#0b1b14")],
         )
 
+        self._build_layout()
+
+    def _build_layout(self):
         header = ttk.Frame(self)
         header.pack(fill=tk.X, padx=10, pady=8)
         self._logo_img = None

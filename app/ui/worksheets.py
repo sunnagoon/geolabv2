@@ -24,8 +24,30 @@ from app.services.worksheet_generic import (
     map_results,
 )
 
-GRAIN_TESTS = {"-200 Washed Sieve", "Sieve Part. Analysis", "Hydrometer"}
 D1557_LIKE_TESTS = {"Max Density", "698 Max", "C Max"}
+
+
+def _norm_test_name(name):
+    raw = (name or "").lower().replace(".", " ").replace("-", " ")
+    return " ".join(raw.split())
+
+
+def _is_hydrometer_name(name):
+    return "hydrometer" in _norm_test_name(name)
+
+
+def _is_washed_sieve_name(name):
+    n = _norm_test_name(name)
+    return "washed sieve" in n or ("200" in n and "sieve" in n)
+
+
+def _is_dry_sieve_name(name):
+    n = _norm_test_name(name)
+    return "sieve" in n and not _is_washed_sieve_name(name)
+
+
+def _is_grain_test_name(name):
+    return _is_dry_sieve_name(name) or _is_washed_sieve_name(name) or _is_hydrometer_name(name)
 
 
 class WorksheetsTab(ttk.Frame):
@@ -53,11 +75,28 @@ class WorksheetsTab(ttk.Frame):
         wrap = ttk.Frame(self)
         wrap.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        left = ttk.LabelFrame(wrap, text="Scheduled Worksheets")
-        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-        right = ttk.LabelFrame(wrap, text="Worksheet Editor")
-        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        controls = ttk.Frame(wrap)
+        controls.pack(fill=tk.X, pady=(0, 6))
+        ttk.Label(controls, text="Drag the divider to resize panes.").pack(side=tk.LEFT)
+        ttk.Button(controls, text="Wider Editor", command=lambda: self._set_pane_ratio(0.28)).pack(side=tk.RIGHT, padx=(6, 0))
+        ttk.Button(controls, text="Balanced", command=lambda: self._set_pane_ratio(0.50)).pack(side=tk.RIGHT)
+
+        self.main_paned = tk.PanedWindow(
+            wrap,
+            orient=tk.HORIZONTAL,
+            sashrelief=tk.RAISED,
+            sashwidth=6,
+            bd=0,
+        )
+        self.main_paned.pack(fill=tk.BOTH, expand=True)
+
+        left = ttk.LabelFrame(self.main_paned, text="Scheduled Worksheets")
+        right = ttk.LabelFrame(self.main_paned, text="Worksheet Editor")
         right.pack_propagate(False)
+
+        self.main_paned.add(left, minsize=280)
+        self.main_paned.add(right, minsize=420)
+        self.after(50, lambda: self._set_pane_ratio(0.32))
 
         self.tree = ttk.Treeview(
             left,
@@ -142,7 +181,7 @@ class WorksheetsTab(ttk.Frame):
         self.compute_btn.pack(side=tk.RIGHT, padx=(8, 0))
         self.graph_btn = tk.Button(
             btns,
-            text="Open Sieve Graph",
+            text="Open Grain Graph",
             command=self._open_grain_graph,
             bg=action_bg,
             fg=action_fg,
@@ -154,6 +193,20 @@ class WorksheetsTab(ttk.Frame):
         self.graph_btn.pack(side=tk.RIGHT, padx=(8, 0))
 
         self._set_editor_mode("none")
+
+    def _set_pane_ratio(self, left_ratio):
+        if not hasattr(self, "main_paned"):
+            return
+        self.update_idletasks()
+        total_w = self.main_paned.winfo_width()
+        if total_w <= 1:
+            return
+        x = int(total_w * left_ratio)
+        x = max(240, min(total_w - 360, x))
+        try:
+            self.main_paned.sash_place(0, x, 0)
+        except tk.TclError:
+            pass
 
     def _on_editor_configure(self, _event):
         self.editor_canvas.configure(scrollregion=self.editor_canvas.bbox("all"))
@@ -189,6 +242,19 @@ class WorksheetsTab(ttk.Frame):
 
         self.generic_calc_var = tk.StringVar(value="Computed: -")
         ttk.Label(parent, textvariable=self.generic_calc_var).pack(anchor=tk.W, pady=4)
+
+        self.graph_inline_btn = tk.Button(
+            parent,
+            text="Open Sieve/Hydrometer Graph",
+            command=self._open_grain_graph,
+            bg="#d6e8f9",
+            fg="#0f2e4a",
+            relief=tk.FLAT,
+            padx=10,
+            pady=6,
+            state=tk.DISABLED,
+        )
+        self.graph_inline_btn.pack(anchor=tk.W, pady=(2, 8))
 
     def _build_d1557_grid(self, parent):
         self.raw_vars = {k: [] for k in ("A", "B", "D", "E", "F")}
@@ -233,13 +299,17 @@ class WorksheetsTab(ttk.Frame):
             self.d1557_frame.pack(fill=tk.BOTH, expand=True)
             self.export_btn.config(text="Export D1557 PDF")
             self.graph_btn.config(state=tk.DISABLED)
+            self.graph_inline_btn.config(state=tk.DISABLED)
         elif mode in ("generic", "grain"):
             self.generic_frame.pack(fill=tk.BOTH, expand=True)
             self.export_btn.config(text="Export Worksheet PDF")
-            self.graph_btn.config(state=tk.NORMAL if mode == "grain" else tk.DISABLED)
+            graph_state = tk.NORMAL if mode == "grain" else tk.DISABLED
+            self.graph_btn.config(state=graph_state)
+            self.graph_inline_btn.config(state=graph_state)
         else:
             self.export_btn.config(text="Export Worksheet PDF")
             self.graph_btn.config(state=tk.DISABLED)
+            self.graph_inline_btn.config(state=tk.DISABLED)
         # Grouped export only applies to simple calculation tests.
         if self.current_test_name in self._groupable_tests():
             self.group_export_btn.config(state=tk.NORMAL)
@@ -359,10 +429,10 @@ class WorksheetsTab(ttk.Frame):
                 self.calc_var.set("Computed: -")
             return
 
-        if self.current_test_name in GRAIN_TESTS:
-            has_wash = "-200 Washed Sieve" in sample_test_names
-            has_sieve = "Sieve Part. Analysis" in sample_test_names
-            has_hydrometer = "Hydrometer" in sample_test_names
+        if _is_grain_test_name(self.current_test_name):
+            has_wash = any(_is_washed_sieve_name(name) for name in sample_test_names)
+            has_sieve = any(_is_dry_sieve_name(name) for name in sample_test_names)
+            has_hydrometer = any(_is_hydrometer_name(name) for name in sample_test_names)
             include_wash, include_dry, include_hydro = grain_size_section_flags(has_wash, has_sieve, has_hydrometer)
             payload = None
             if grain_row and grain_row["payload_json"]:
