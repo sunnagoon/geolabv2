@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+build/
+dist/
+release/
+installer/obj/
+*.wixobj
+*.wixpdb
+*.spec
+data/project_map.html

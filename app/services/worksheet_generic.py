@@ -9,6 +9,39 @@ except Exception:
 
 
 WORKSHEET_SPECS = {
+    "Moisture Content": {
+        "key": "moisture_content",
+        "title": "MOISTURE CONTENT",
+        "astm": "ASTM D 2216",
+        "fields": [
+            ("moisture_content", "Moisture Content", "%"),
+        ],
+        "computed": [],
+    },
+    "Atterberg Limits": {
+        "key": "atterberg_limits",
+        "title": "ATTERBERG LIMITS",
+        "astm": "ASTM D 4318",
+        "fields": [
+            ("liquid_limit", "Liquid Limit", "%"),
+            ("plastic_limit", "Plastic Limit", "%"),
+        ],
+        "computed": [
+            ("plasticity_index", "Plasticity Index", "%"),
+        ],
+    },
+    "LL/PL": {
+        "key": "atterberg_limits",
+        "title": "ATTERBERG LIMITS",
+        "astm": "ASTM D 4318",
+        "fields": [
+            ("liquid_limit", "Liquid Limit", "%"),
+            ("plastic_limit", "Plastic Limit", "%"),
+        ],
+        "computed": [
+            ("plasticity_index", "Plasticity Index", "%"),
+        ],
+    },
     "Sand Cone": {
         "key": "sand_cone",
         "title": "SAND CONE DENSITY TEST",
@@ -93,6 +126,78 @@ WORKSHEET_SPECS = {
         ],
         "computed": [],
     },
+    "Swell/Hydro": {
+        "key": "hydro_response",
+        "title": "HYDRO RESPONSE",
+        "astm": "ASTM D 4546",
+        "fields": [
+            ("hydro_response", "Hydro Response", "%"),
+            ("normal_stress", "Normal Stress", "psf"),
+        ],
+        "computed": [],
+    },
+    "Direct Shear": {
+        "key": "direct_shear",
+        "title": "DIRECT SHEAR",
+        "astm": "ASTM D 3080",
+        "fields": [
+            ("peak_phi", "Peak Friction Angle", "deg"),
+            ("peak_cohesion", "Peak Cohesion", "psf"),
+            ("ultimate_phi", "Ultimate Friction Angle", "deg"),
+            ("ultimate_cohesion", "Ultimate Cohesion", "psf"),
+        ],
+        "computed": [],
+    },
+    "Chem": {
+        "key": "chem",
+        "title": "CORROSIVITY SERIES",
+        "astm": "CTM422 / CTM417 / CTM643",
+        "fields": [
+            ("chlorides", "Chloride Content", "%"),
+            ("sulfates", "Sulfate Content", "%"),
+            ("resistivity", "Resistivity", "ohm-cm"),
+            ("ph", "pH", "pH"),
+        ],
+        "computed": [],
+    },
+    "R-Value": {
+        "key": "r_value",
+        "title": "R-VALUE",
+        "astm": "ASTM D 2844",
+        "fields": [
+            ("r_value", "R-Value by Equilibration", ""),
+        ],
+        "computed": [],
+    },
+    "Consol": {
+        "key": "consol",
+        "title": "CONSOLIDATION",
+        "astm": "ASTM D 2435",
+        "fields": [
+            ("consol_pressure", "Consolidation Pressure", "tsf"),
+            ("consol_settlement", "Settlement", "in"),
+        ],
+        "computed": [],
+    },
+    "Core Measurements": {
+        "key": "core_measurements",
+        "title": "CORE MEASUREMENTS",
+        "astm": "Core Measurements",
+        "fields": [
+            ("core_recovery", "Core Recovery", "%"),
+            ("rq_d", "RQD", "%"),
+        ],
+        "computed": [],
+    },
+    "Petrographic Analysis": {
+        "key": "petrographic_analysis",
+        "title": "PETROGRAPHIC ANALYSIS",
+        "astm": "Petrographic Analysis",
+        "fields": [
+            ("petro_observations", "Observations", ""),
+        ],
+        "computed": [],
+    },
     "Field Density/Moisture": {
         "key": "field_moisture_density",
         "title": "FIELD DENSITY/MOISTURE",
@@ -126,6 +231,8 @@ WORKSHEET_SPECS = {
 
 
 def get_spec(test_name):
+    if test_name == "Moisture and Density":
+        return WORKSHEET_SPECS.get("Field Density/Moisture")
     return WORKSHEET_SPECS.get(test_name)
 
 
@@ -209,7 +316,15 @@ def compute_values(test_name, payload):
         idx = _num(vals.get("expansion_index"))
         out["expansion_potential"] = _expansion_potential(idx)
 
+    elif test_name in ("Atterberg Limits", "LL/PL"):
+        ll = _num(vals.get("liquid_limit"))
+        pl = _num(vals.get("plastic_limit"))
+        out["plasticity_index"] = _sub(ll, pl)
+
     elif test_name in ("Hydro Response",):
+        pass
+
+    elif test_name in ("Swell/Hydro",):
         pass
 
     elif test_name == "Field Density/Moisture":
@@ -269,6 +384,8 @@ def compute_values(test_name, payload):
                 "saturation": sat,
             }
         )
+    elif test_name == "Moisture and Density":
+        out = compute_values("Field Density/Moisture", vals)
 
     return out
 
@@ -340,6 +457,18 @@ def map_results(test_name, payload, computed):
             "result_unit4": "",
             "result_notes": None,
         }
+    if test_name == "Swell/Hydro":
+        return {
+            "result_value": _round_or_none(_num(p.get("hydro_response"))),
+            "result_unit": "%",
+            "result_value2": _round_or_none(_num(p.get("normal_stress"))),
+            "result_unit2": "psf",
+            "result_value3": None,
+            "result_unit3": "",
+            "result_value4": None,
+            "result_unit4": "",
+            "result_notes": None,
+        }
     if test_name == "Field Density/Moisture":
         return {
             "result_value": _round_or_none(c.get("dry_density")),
@@ -351,6 +480,121 @@ def map_results(test_name, payload, computed):
             "result_value4": None,
             "result_unit4": "",
             "result_notes": "Method: Ring",
+        }
+    if test_name == "Moisture and Density":
+        return map_results("Field Density/Moisture", p, c)
+    if test_name == "Moisture Content":
+        return {
+            "result_value": _round_or_none(_num(p.get("moisture_content"))),
+            "result_unit": "%",
+            "result_value2": None,
+            "result_unit2": "",
+            "result_value3": None,
+            "result_unit3": "",
+            "result_value4": None,
+            "result_unit4": "",
+            "result_notes": None,
+        }
+    if test_name in ("Atterberg Limits", "LL/PL"):
+        return {
+            "result_value": _round_or_none(_num(p.get("liquid_limit"))),
+            "result_unit": "%",
+            "result_value2": _round_or_none(c.get("plasticity_index")),
+            "result_unit2": "%",
+            "result_value3": None,
+            "result_unit3": "",
+            "result_value4": None,
+            "result_unit4": "",
+            "result_notes": None,
+        }
+    if test_name == "Direct Shear":
+        return {
+            "result_value": _round_or_none(_num(p.get("peak_phi"))),
+            "result_unit": "PHI",
+            "result_value2": _round_or_none(_num(p.get("peak_cohesion"))),
+            "result_unit2": "psf",
+            "result_value3": _round_or_none(_num(p.get("ultimate_phi"))),
+            "result_unit3": "PHI",
+            "result_value4": _round_or_none(_num(p.get("ultimate_cohesion"))),
+            "result_unit4": "psf",
+            "result_notes": None,
+        }
+    if test_name == "Chem":
+        resistivity = _num(p.get("resistivity"))
+        ph = _num(p.get("ph"))
+        chlorides = _num(p.get("chlorides"))
+        sulfates = _num(p.get("sulfates"))
+        has_all = resistivity is not None or ph is not None
+        if has_all:
+            return {
+                "result_value": _round_or_none(resistivity),
+                "result_unit": "ohm-cm",
+                "result_value2": _round_or_none(sulfates),
+                "result_unit2": "%",
+                "result_value3": _round_or_none(chlorides),
+                "result_unit3": "%",
+                "result_value4": _round_or_none(ph),
+                "result_unit4": "pH",
+                "result_notes": None,
+            }
+        return {
+            "result_value": _round_or_none(chlorides),
+            "result_unit": "%",
+            "result_value2": _round_or_none(sulfates),
+            "result_unit2": "%",
+            "result_value3": None,
+            "result_unit3": "",
+            "result_value4": None,
+            "result_unit4": "",
+            "result_notes": None,
+        }
+    if test_name == "R-Value":
+        return {
+            "result_value": _round_or_none(_num(p.get("r_value"))),
+            "result_unit": "",
+            "result_value2": None,
+            "result_unit2": "",
+            "result_value3": None,
+            "result_unit3": "",
+            "result_value4": None,
+            "result_unit4": "",
+            "result_notes": None,
+        }
+    if test_name == "Consol":
+        return {
+            "result_value": _round_or_none(_num(p.get("consol_pressure"))),
+            "result_unit": "tsf",
+            "result_value2": _round_or_none(_num(p.get("consol_settlement"))),
+            "result_unit2": "in",
+            "result_value3": None,
+            "result_unit3": "",
+            "result_value4": None,
+            "result_unit4": "",
+            "result_notes": None,
+        }
+    if test_name == "Core Measurements":
+        return {
+            "result_value": _round_or_none(_num(p.get("core_recovery"))),
+            "result_unit": "%",
+            "result_value2": _round_or_none(_num(p.get("rq_d"))),
+            "result_unit2": "%",
+            "result_value3": None,
+            "result_unit3": "",
+            "result_value4": None,
+            "result_unit4": "",
+            "result_notes": None,
+        }
+    if test_name == "Petrographic Analysis":
+        return {
+            "result_value": None,
+            "result_unit": "",
+            "result_value2": None,
+            "result_unit2": "",
+            "result_value3": None,
+            "result_unit3": "",
+            "result_value4": None,
+            "result_unit4": "",
+            "result_notes": (p.get("petro_observations") or "").strip() or None,
         }
     return {
         "result_value": None,

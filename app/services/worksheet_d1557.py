@@ -118,7 +118,7 @@ def calculate_d1557(points):
     }
 
 
-def export_d1557_pdf(path, project, sample_label, rows, calc, g_values):
+def export_d1557_pdf(path, project, sample_label, rows, calc, g_values, astm_designation="ASTM D1557"):
     if canvas is None:
         raise RuntimeError("PDF export requires reportlab. Please install dependencies.")
     Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -165,7 +165,7 @@ def export_d1557_pdf(path, project, sample_label, rows, calc, g_values):
 
     # Header block
     c.setFont("Helvetica-Bold", 13)
-    c.drawString(30, y_top, "COMPACTION TEST - ASTM D1557")
+    c.drawString(30, y_top, f"COMPACTION TEST - {astm_designation}")
     c.setFont("Helvetica", 9)
     c.drawString(30, y_top - 16, f"Project: {project.get('job_name', '')}")
     c.drawString(30, y_top - 29, f"File Number: {project.get('file_number', '')}")

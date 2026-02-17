@@ -228,9 +228,14 @@ def _build_schema(tests: list[dict], results: list[dict]):
             schema.append(_col(test["id"], "ASTM D 1556", "Moisture Content", "%", _value2))
             continue
 
-        if name in ("Max Density",):
+        if name in ("Max Density", "C Max"):
             schema.append(_col(test["id"], "ASTM D 1557", "Maximum Dry Density", "pcf", _value1))
             schema.append(_col(test["id"], "ASTM D 1557", "Opt. Moisture Content", "%", _value2))
+            continue
+
+        if name in ("698 Max",):
+            schema.append(_col(test["id"], "ASTM D 698", "Maximum Dry Density", "pcf", _value1))
+            schema.append(_col(test["id"], "ASTM D 698", "Opt. Moisture Content", "%", _value2))
             continue
 
         if name in ("Moisture Content",):

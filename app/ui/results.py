@@ -301,6 +301,8 @@ class ResultsTab(ttk.Frame):
     def _apply_labels(self, test_name):
         label_map = {
             "Max Density": ("Maximum Density", "Optimum Moisture", None, None),
+            "698 Max": ("Maximum Density", "Optimum Moisture", None, None),
+            "C Max": ("Maximum Density", "Optimum Moisture", None, None),
             "Direct Shear": ("Peak Phi", "Peak Cohesion", "Ultimate Phi", "Ultimate Cohesion"),
             "Field Density/Moisture": ("Dry Density", "Moisture Content", "Saturation", None),
             "Sand Cone": ("Dry Density", "Moisture Content", None, None),

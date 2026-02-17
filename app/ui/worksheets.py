@@ -25,6 +25,7 @@ from app.services.worksheet_generic import (
 )
 
 GRAIN_TESTS = {"-200 Washed Sieve", "Sieve Part. Analysis", "Hydrometer"}
+D1557_LIKE_TESTS = {"Max Density", "698 Max", "C Max"}
 
 
 class WorksheetsTab(ttk.Frame):
@@ -347,9 +348,10 @@ class WorksheetsTab(ttk.Frame):
             self._set_editor_mode("none")
             return
 
-        if self.current_test_name == "Max Density":
+        if self.current_test_name in D1557_LIKE_TESTS:
+            meta = self._d1557_meta(self.current_test_name)
             self._set_editor_mode("d1557")
-            self.mode_var.set("ASTM D1557 worksheet mode (A/B/D/E/F -> C/G/H/I).")
+            self.mode_var.set(f"{meta['astm']} worksheet mode (A/B/D/E/F -> C/G/H/I).")
             if d1557_row and d1557_row["points_json"]:
                 self._load_saved_d1557_json(d1557_row["points_json"])
                 self._recompute_d1557()
@@ -779,7 +781,14 @@ class WorksheetsTab(ttk.Frame):
             (sample_test_id,),
         ).fetchone()
         conn.close()
-        return bool(row and row["test_name"] == "Max Density")
+        return bool(row and row["test_name"] in D1557_LIKE_TESTS)
+
+    def _d1557_meta(self, test_name):
+        if test_name == "698 Max":
+            return {"astm": "ASTM D698", "file_prefix": "D698"}
+        if test_name == "C Max":
+            return {"astm": "ASTM D1557", "file_prefix": "CMAX_D1557"}
+        return {"astm": "ASTM D1557", "file_prefix": "D1557"}
 
     def _compute_and_save(self):
         sid = self._selected_sample_test()
@@ -1074,13 +1083,14 @@ class WorksheetsTab(ttk.Frame):
         if not row:
             messagebox.showerror("Missing", "Could not find selected worksheet record.")
             return
+        meta = self._d1557_meta(self.current_test_name)
         sample_label = row["sample_name"] if not row["depth_raw"] else f"{row['sample_name']} @ {row['depth_raw']}"
-        default_name = f"D1557_{row['file_number']}_{row['sample_name']}.pdf"
+        default_name = f"{meta['file_prefix']}_{row['file_number']}_{row['sample_name']}.pdf"
         path = filedialog.asksaveasfilename(defaultextension=".pdf", initialfile=default_name)
         if not path:
             return
         try:
-            export_d1557_pdf(path, dict(row), sample_label, rows, calc, g_values)
+            export_d1557_pdf(path, dict(row), sample_label, rows, calc, g_values, meta["astm"])
         except Exception as exc:
             messagebox.showerror("Export Failed", f"Failed to export PDF: {exc}")
             return

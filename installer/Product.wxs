@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+    Id="*"
+    Name="GeoLab"
+    Language="1033"
+    Version="$(var.ProductVersion)"
+    Manufacturer="TerraPacific Consultants Inc"
+    UpgradeCode="D57A7D84-65E6-4D7A-9F65-7A5A44B58E61">
+
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPPRODUCTICON" Value="GeoLabExeIcon" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="GeoLab" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="GeoLab" />
+      </Directory>
+    </Directory>
+
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcuts" Guid="B53C8D9C-6FF2-4419-8EA5-7DA2A77E2A4F">
+        <Shortcut
+          Id="ApplicationStartMenuShortcut"
+          Name="GeoLab"
+          Description="GeoLab"
+          Target="[INSTALLFOLDER]GeoLab.exe"
+          WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\GeoLab" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Icon Id="GeoLabExeIcon" SourceFile="dist\GeoLab\GeoLab.exe" />
+
+    <Feature Id="ProductFeature" Title="GeoLab" Level="1">
+      <ComponentGroupRef Id="GeoLabFiles" />
+      <ComponentRef Id="ApplicationShortcuts" />
+    </Feature>
+  </Product>
+</Wix>
